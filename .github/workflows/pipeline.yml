@@ -1,0 +1,48 @@
+name: AQI Pipeline
+
+on:
+  schedule:
+    - cron: "0 * * * *"   # toutes les heures, pile
+  workflow_dispatch: {}     # permet un déclenchement manuel depuis l'onglet Actions
+
+permissions:
+  contents: write
+
+jobs:
+  collect-and-load:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Installation des dépendances
+        run: pip install -r requirements.txt
+
+      - name: Collecte horaire (raw/)
+        working-directory: src
+        env:
+          OWM_API_KEY: ${{ secrets.OWM_API_KEY }}
+        run: python fetch_current.py
+
+      - name: Reconstruction de clean/
+        working-directory: src
+        run: python build_clean.py
+
+      - name: Chargement du warehouse
+        working-directory: src
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python load_warehouse.py
+
+      - name: Commit des nouvelles données
+        run: |
+          git config user.name "aqi-bot"
+          git config user.email "aqi-bot@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet || git commit -m "chore: collecte AQI $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push
