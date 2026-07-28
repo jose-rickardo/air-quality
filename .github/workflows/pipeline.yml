@@ -1,9 +1,8 @@
 name: AQI Pipeline
 
 on:
-  schedule:
-    - cron: "0 * * * *"   # toutes les heures, pile
-  workflow_dispatch: {}     # permet un déclenchement manuel depuis l'onglet Actions
+
+  workflow_dispatch: {}    
 
 permissions:
   contents: write
